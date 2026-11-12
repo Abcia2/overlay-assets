@@ -49,15 +49,26 @@ def _get(url, path):
     return path
 
 
+REPO_ZIP = "https://codeload.github.com/Abcia2/overlay-assets/zip/refs/heads/main"  # tutto il repo in un colpo
+
+
 def setup(assets=True):
-    """Scarica i font e (se assets=True) il pacchetto di asset dal repo GitHub."""
+    """Scarica i font e (se assets=True) tutto il repo GitHub con gli asset. Non serve nessun assets.zip."""
     os.makedirs(OUT, exist_ok=True)
     for name, url in FONT_URLS.items():
         _get(url, f"{WORK}/fonts/{name}.ttf")
     if assets and not os.path.exists(f"{WORK}/assets"):
         try:
-            data = urllib.request.urlopen(REPO + "assets.zip").read()
-            zipfile.ZipFile(io.BytesIO(data)).extractall(f"{WORK}/assets")
+            z = zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(REPO_ZIP).read()))
+            for m in z.infolist():
+                parts = m.filename.split("/", 1)          # toglie la cartella "overlay-assets-main/"
+                if len(parts) < 2 or not parts[1] or m.is_dir():
+                    continue
+                dest = os.path.join(WORK, "assets", parts[1])
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                with open(dest, "wb") as f:
+                    f.write(z.read(m))
+            print("asset scaricati in", f"{WORK}/assets")
         except Exception as e:
             print("Asset dal repo non disponibili:", e, "(usa i file caricati in chat)")
     print("overlay_kit pronto")
